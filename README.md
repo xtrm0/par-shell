@@ -26,16 +26,16 @@ Just run make:
 
 Folder Structure:
 ==========
-* bin:
-** folder where executable files go into
-* source:
-** implementation files (code/tests has unit tests)
-* include:
-** header files
-* objects:
-** the place where objects are compiled into
++ bin:
+  + folder where executable files go into
++ source:
+  + implementation files (code/tests has unit tests)
++ include:
+  + header files
++ objects:
+  + the place where objects are compiled into
 + enunciados:
-** project statements (in portuguese)
+  + project statements (in portuguese)
 
 
 Notes:
