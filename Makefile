@@ -31,7 +31,7 @@ debug: LNFLAGS += -D_DEBUG -g -Wall
 debug: par-shell
 
 clean:
-		rm -v $(OBJECTSPATH) $(ODIR)/main.o $(BDIR)/par-shell 
+		rm -v $(OBJECTSPATH) $(ODIR)/main.o $(BDIR)/par-shell
 #rules to link par-shell
 par-shell: $(OBJECTSPATH) $(ODIR)/main.o
 		$(LN) $(LNFLAGS) $(OBJECTSPATH) $(ODIR)/main.o $(LNLIBS) -o $(BDIR)/par-shell

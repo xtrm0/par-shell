@@ -1,11 +1,10 @@
-//
-// Command line reader (header file), version 1
+/*
+// Command line reader (header file), version 2
 // Sistemas Operativos, DEI/IST/ULisboa 2015-16
-//
+*/
 
 #ifndef COMMANDLINEREADER_H
 #define COMMANDLINEREADER_H
-#endif
 
 /* 
 Reads up to 'vectorSize' space-separated arguments from the standard input
@@ -16,10 +15,13 @@ is reached
 Arguments: 
  'argVector' should be a vector of char* previously allocated with
  as many entries as 'vectorSize'
- 'vectorSize' is the maximum number of arguments that should be read
+ 'vectorSize' is the size of the above vector. A vector of size N allows up to 
+ N-1 arguments to be read; the entry after the last argument is set to NULL.
 
 Return value:
  The number of arguments that were read, or -1 if some error occurred.
 */
 
 int readLineArguments(char **argVector, int vectorSize);
+
+#endif
