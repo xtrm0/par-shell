@@ -1,4 +1,4 @@
-FLAGS=-O3 -Ofast -c -Wall
+FLAGS=-O3 -Ofast -c -Wall -Iinclude
 LNFLAGS=-O3 -Ofast
 LNLIBS=
 CC = gcc
@@ -10,6 +10,7 @@ TDIR=$(CDIR)/tests
 BDIR=bin
 OBJECTS=commandlinereader.o
 OBJECTSPATH = $(patsubst %,$(ODIR)/%,$(OBJECTS))
+
 .PHONY: all clean debug precommit
 
 all: par-shell
