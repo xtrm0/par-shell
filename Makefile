@@ -1,22 +1,24 @@
-FLAGS=-O3 -Ofast -c -Wall -Iinclude
-LNFLAGS=-O3 -Ofast
-LNLIBS=
-CC = gcc
-LN = gcc
 IDIR=include
 ODIR=objects
 CDIR=source
 TDIR=$(CDIR)/tests
 BDIR=bin
+
 OBJECTS=commandlinereader.o
 OBJECTSPATH = $(patsubst %,$(ODIR)/%,$(OBJECTS))
+LNLIBS=
 
-.PHONY: all clean debug precommit
+CC = gcc
+LN = gcc
+FLAGS=-O3 -Ofast -c -Wall -I$(IDIR)
+LNFLAGS=-O3 -Ofast
 
-all: par-shell
+.PHONY: all clean debug run drun
+
+all: $(BDIR)/par-shell
 
 #Compila e corre o projeto
-run: par-shell
+run: $(BDIR)/par-shell
 		$(BDIR)/par-shell
 
 #Compila o projeto em modo debug e corre
@@ -24,30 +26,19 @@ drun: debug
 		$(BDIR)/par-shell
 
 release: clean
-release: par-shell
+release: $(BDIR)/par-shell
 
 debug: clean
 debug: FLAGS = -c -D_DEBUG -g -Wall
 debug: LNFLAGS += -D_DEBUG -g -Wall
-debug: par-shell
+debug: $(BDIR)/par-shell
 
 clean:
-		rm -v $(OBJECTSPATH) $(ODIR)/main.o $(BDIR)/par-shell
+		rm -v $(ODIR)/*.o $(BDIR)/par-shell
 #rules to link par-shell
-par-shell: $(OBJECTSPATH) $(ODIR)/main.o
+$(BDIR)/par-shell: $(OBJECTSPATH) $(ODIR)/main.o
 		$(LN) $(LNFLAGS) $(OBJECTSPATH) $(ODIR)/main.o $(LNLIBS) -o $(BDIR)/par-shell
 
 #rules to compile objects on code dir
 $(ODIR)/%.o: $(CDIR)/%.c
 	$(CC) $(FLAGS) $< -o $@
-#rules to compile objects on tests dir
-$(ODIR)/%.o: $(TDIR)/%.c
-	$(CC) $(FLAGS) $< -o $@
-
-#before making commits, make clean shall be run!
-precommit: clean
-
-##############
-# UNIT TESTS #
-##############
-#NONE YET

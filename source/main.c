@@ -1,4 +1,5 @@
 #include "commandlinereader.h"
+#include "defines.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -9,12 +10,14 @@ int runningProcesses = 0;
 
 void newProcess(char * const *args);
 void exitParShell();
+void showPrompt();
 
 
 int main() {
   char *args[N_ARGS];
 
   while(1) {
+    //showPrompt(); ?
     if (readLineArguments(args, N_ARGS)==-1) continue;
     if (strcmp(args[0],"exit")==0) break;
     newProcess(args);
@@ -49,4 +52,11 @@ void exitParShell() {
     else
       printf("Process %d terminated with error %d\n", pid, returnCode);
   }
+}
+
+void showPrompt() {
+  char *pwd = getcwd(NULL,42);
+  TESTMEM(pwd);
+  printf("%s$ ", pwd);
+  LIBERATE(pwd)
 }
