@@ -1,4 +1,4 @@
-![Version Info](https://img.shields.io/badge/version-0.1-orange.svg)
+![Version Info](https://img.shields.io/badge/version-0.1-green.svg)
 
 SO Project - par-shell
 =========
