@@ -88,3 +88,10 @@ void showPrompt() {
   printf("%s$ ", pwd);
   free(pwd);
 }
+
+void showPrompt() {
+  char *pwd = getcwd(NULL,42);
+  TESTMEM(pwd);
+  printf("%s$ ", pwd);
+  LIBERATE(pwd)
+}
