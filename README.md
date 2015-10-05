@@ -22,24 +22,3 @@ Just run make:
   make clean
   make all
 ```
-
-
-Folder Structure:
-==========
-+ bin:
-  + folder where executable files go into
-+ source:
-  + implementation files (code/tests has unit tests)
-+ include:
-  + header files
-+ objects:
-  + the place where objects are compiled into
-+ enunciados:
-  + project statements (in portuguese)
-
-
-Notes:
-==========
-Version 0.X means a complete solution to lab X
-Red means incomplete
-Green means complete
