@@ -36,7 +36,7 @@ int readLineArguments(char **argVector, int vectorSize)
   if (argVector == NULL || vectorSize == 0)
     return 0;
 
-  if (getline(&str, &size, stdin) <= 1) {
+  if (getline(&str, &size, stdin) < 0) {
     printf("!!\n");
     return -1;
   }
