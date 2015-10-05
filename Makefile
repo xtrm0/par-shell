@@ -1,44 +1,23 @@
-IDIR=include
-ODIR=objects
-CDIR=source
-TDIR=$(CDIR)/tests
-BDIR=bin
 
-OBJECTS=commandlinereader.o
-OBJECTSPATH = $(patsubst %,$(ODIR)/%,$(OBJECTS))
-LNLIBS=
+#compilador:
+CC = gcc -Wall -O3 -Ofast
 
-CC = gcc
-LN = gcc
-FLAGS=-O3 -Ofast -c -Wall -I$(IDIR)
-LNFLAGS=-O3 -Ofast
+#regra para compilar ./par-shell
+par-shell: commandlinereader.o main.o
+	$(CC) -o par-shell main.o commandlinereader.o
 
-.PHONY: all clean debug run drun
+#regra para compilar ./commandlinereader.o
+commandlinereader.o: commandlinereader.c commandlinereader.h
+	$(CC) -g -c commandlinereader.c
 
-all: $(BDIR)/par-shell
+#regra para compilar ./main.o
+main.o: main.c commandlinereader.h defines.h
+	$(CC) -g -c main.c
 
-#Compila e corre o projeto
-run: $(BDIR)/par-shell
-		$(BDIR)/par-shell
+#pseudo regras: (nao definem ficheiros para compilar, mas sim modos de funcionamento do make)
+.PHONY: all clean
 
-#Compila o projeto em modo debug e corre
-drun: debug
-		$(BDIR)/par-shell
-
-release: clean
-release: $(BDIR)/par-shell
-
-debug: clean
-debug: FLAGS = -c -D_DEBUG -g -Wall
-debug: LNFLAGS += -D_DEBUG -g -Wall
-debug: $(BDIR)/par-shell
+all: par-shell
 
 clean:
-		rm -v $(ODIR)/*.o $(BDIR)/par-shell
-#rules to link par-shell
-$(BDIR)/par-shell: $(OBJECTSPATH) $(ODIR)/main.o
-		$(LN) $(LNFLAGS) $(OBJECTSPATH) $(ODIR)/main.o $(LNLIBS) -o $(BDIR)/par-shell
-
-#rules to compile objects on code dir
-$(ODIR)/%.o: $(CDIR)/%.c
-	$(CC) $(FLAGS) $< -o $@
+	rm ./*.o ./par-shell

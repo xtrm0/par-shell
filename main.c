@@ -69,7 +69,7 @@ void exitParShell() {
   //output the returnCodes for all child processes
   while(runningProcesses--) {
     pid        = pids[runningProcesses];
-    returnCode = returnCodes[runningProcesses];
+    returnCode = WEXITSTATUS(returnCodes[runningProcesses]); //equivalente a (returnCodes[runningProcesses]>>8) & ((2<<9)-1)
     if (returnCode == 0)
       printf("Process %d terminated with success!\n", pid);
     else
