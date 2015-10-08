@@ -10,6 +10,7 @@ int runningProcesses = 0;
 
 void newProcess(char * const *args);
 void exitParShell();
+void printExitStatus(int pid, int status);
 void showPrompt();
 
 
@@ -51,8 +52,6 @@ void newProcess(char * const *args) {
 */
 void exitParShell() {
   int i;
-  int returnCode;
-  int pid;
   int *returnCodes = NULL;
   int *pids = NULL;
   pids = malloc(sizeof(int) * runningProcesses);
@@ -68,15 +67,38 @@ void exitParShell() {
 
   //output the returnCodes for all child processes
   while(runningProcesses--) {
-    pid        = pids[runningProcesses];
-    returnCode = WEXITSTATUS(returnCodes[runningProcesses]); //equivalente a (returnCodes[runningProcesses]>>8) & ((2<<9)-1)
-    if (returnCode == 0)
-      printf("Process %d terminated with success!\n", pid);
-    else
-      printf("Process %d terminated with error %d\n", pid, returnCode);
+    printExitStatus(pids[runningProcesses], returnCodes[runningProcesses]);
   }
   free(pids);
   free(returnCodes);
+}
+
+/*
+  Prints the exit status of a process based on status
+*/
+void printExitStatus(int pid, int status) {
+  printf("Process %d terminated", pid);
+
+  //Caso o processo tenha terminado apos chamar o exit():
+  if (WIFEXITED(status)) {
+    if (status == 0) {
+      printf(" normally with success!\n");
+    }
+    else {
+      printf(" normally returning %d\n", WEXITSTATUS(status));
+    }
+  }
+
+  //Caso o processo tenha sido terminado por um sinal:
+  if (WTERMSIG(status)) {
+    printf(" with signal %d (%s)", WTERMSIG(status), strsignal(WTERMSIG(status)));
+    #ifdef WCOREDUMP
+      if (WCOREDUMP(status)) {
+        printf(" (core dumped)");
+      }
+    #endif
+    printf("\n");
+  }
 }
 
 /*
