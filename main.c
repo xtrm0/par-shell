@@ -27,7 +27,10 @@ int main(int argc, char ** argv) {//renato.nunes@tecnico.ulisboa.pt
     //showPrompt(); //?
     if (readLineArguments(args, N_ARGS) <= 0) continue;
     if (strcmp(args[0],"exit") == 0 ) break;
-    if (runningProcesses > maxProcesses) {fprintf(stderr, "O numero de filhos e maior que o permitido\n");break;}
+    if (runningProcesses > maxProcesses) {
+		fprintf(stderr, "O numero de filhos e maior que o permitido\n");
+		break;
+	}
     
     newProcess(args);
   }
