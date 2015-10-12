@@ -14,13 +14,21 @@ void printExitStatus(int pid, int status);
 void showPrompt();
 
 
-int main() {
+int main(int argc, char ** argv) {//renato.nunes@tecnico.ulisboa.pt
   char *args[N_ARGS];
-
+  int maxProcesses;
+  if(argc < 2) {
+	printf("Correr %s <numero maximo processos filho>\n", argv[0]);
+	return 0;
+  }
+  
+  maxProcesses = atoi(argv[1]);
   while(1) {
     //showPrompt(); //?
     if (readLineArguments(args, N_ARGS) <= 0) continue;
-    if (strcmp(args[0],"exit") == 0) break;
+    if (strcmp(args[0],"exit") == 0 ) break;
+    if (runningProcesses > maxProcesses) {fprintf(stderr, "O numero de filhos e maior que o permitido\n");break;}
+    
     newProcess(args);
   }
 

@@ -1,0 +1,10 @@
+fibonacci 10000
+fibonacci 11
+fibonacci 
+fibonacci 1002
+  	  
+ola
+/bin/ls
+div0
+exit
+
