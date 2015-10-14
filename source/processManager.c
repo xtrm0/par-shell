@@ -1,4 +1,10 @@
 #include "processManager.h"
+
+typedef struct PROCESSES {
+  int dimension;
+  int allocated;
+  RunningProcess * vRunningProcess;
+} vProcesses;
 static vProcesses processes;
 
 

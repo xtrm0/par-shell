@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+
 typedef struct RUNNING_PROCESS {
   int running;
   int pid;
@@ -13,12 +14,6 @@ typedef struct RUNNING_PROCESS {
   struct timespec startTime;
   struct timespec endTime;
 } RunningProcess;
-
-typedef struct PROCESSES {
-  int dimension;
-  int allocated;
-  RunningProcess * vRunningProcess;
-} vProcesses;
 
 void initProcessManager();
 void addProcess(int proccessId);
