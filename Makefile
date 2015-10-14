@@ -4,9 +4,9 @@ CDIR=source
 TDIR=$(CDIR)/tests
 BDIR=bin
 
-OBJECTS=commandlinereader.o
+OBJECTS=commandlinereader.o processVector.o
 OBJECTSPATH = $(patsubst %,$(ODIR)/%,$(OBJECTS))
-LNLIBS=
+LNLIBS=-lpthread
 
 CC = gcc
 LN = gcc

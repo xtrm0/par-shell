@@ -1,21 +1,62 @@
+#include "processVector.h"
 #include "commandlinereader.h"
 #include "defines.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <sys/wait.h>
 #define N_ARGS 5
-int runningProcesses = 0;
+int runningProcesses=0;
+int exitCalled=0;
 
 void newProcess(char * const *args);
 void exitParShell();
-void printExitStatus(int pid, int status);
 void showPrompt();
 
+void * processMonitor(void * skip) {
+  int pid, status;
+  while(1) {
+    //bloqueia mutex
+    if (runningProcesses > 0) {
+      //desbloqueia mutex
+      pid = wait(&status);
+      //bloqueia mutex
+      endProcess(pid, status);
+      runningProcesses--;
+    }
+    //desbloqueia mutex
+    //bloqueia
+    if (runningProcesses == 0) {
+      //desbloqueia
+      sleep(1);
+    }
+    else {
+      //desbloqueia
+    }
+
+    //bloqueia
+    //bloqueia2
+    if (runningProcesses == 0 && exitCalled) {
+      //desbloqueia
+      break;
+    }
+    else {
+      //desbloqueia
+    }
+  }
+  return NULL;
+}
 
 int main() {
+  pthread_t threadMonitor;
   char *args[N_ARGS];
+
+  if(pthread_create (&threadMonitor, 0,processMonitor, NULL)!= 0) {
+    printf("Erro na criação da tarefa\n");
+    exit(-1);
+  }
 
   while(1) {
     //showPrompt(); //?
@@ -24,6 +65,11 @@ int main() {
     newProcess(args);
   }
 
+  //bloqueia mutex
+  exitCalled = 1;
+  //desbloqueia mutex
+
+  pthread_join(threadMonitor, NULL);
   exitParShell();
 
   return 0;
@@ -43,7 +89,10 @@ void newProcess(char * const *args) {
     perror("Erro na criação do processo-filho:\n");
   }
   else { //fork worked and we are in the parent process
+    //bloqueia mutex
+    addProcess(pid);
     runningProcesses++;
+    //desbloqueia mutex
   }
 }
 
@@ -52,54 +101,14 @@ void newProcess(char * const *args) {
 */
 void exitParShell() {
   int i;
-  int *returnCodes = NULL;
-  int *pids = NULL;
-  pids = malloc(sizeof(int) * runningProcesses);
-  returnCodes = malloc(sizeof(int) * runningProcesses);
-  TESTMEM(pids); //checks if malloc worked
-  TESTMEM(returnCodes);
-
-  //wait for all the child processes to finish
-  for (i=0; i<runningProcesses; i++) {
-    pids[i] = wait(returnCodes + i);
-  }
-
-
+  int n = getProcessCount();
   //output the returnCodes for all child processes
-  while(runningProcesses--) {
-    printExitStatus(pids[runningProcesses], returnCodes[runningProcesses]);
-  }
-  free(pids);
-  free(returnCodes);
-}
-
-/*
-  Prints the exit status of a process based on status
-*/
-void printExitStatus(int pid, int status) {
-  printf("Process %d terminated", pid);
-
-  //Caso o processo tenha terminado apos chamar o exit():
-  if (WIFEXITED(status)) {
-    if (status == 0) {
-      printf(" normally with success!\n");
-    }
-    else {
-      printf(" normally returning %d\n", WEXITSTATUS(status));
-    }
-  }
-
-  //Caso o processo tenha sido terminado por um sinal:
-  if (WTERMSIG(status)) {
-    printf(" with signal %d (%s)", WTERMSIG(status), strsignal(WTERMSIG(status)));
-    #ifdef WCOREDUMP
-      if (WCOREDUMP(status)) {
-        printf(" (core dumped)");
-      }
-    #endif
-    printf("\n");
+  for (i=0; i<n; i++) {
+    printExitStatus(getProcessPid(i), getProcessStatus(i), getRunningTime(i));
   }
 }
+
+
 
 /*
   Outputs to stdout the current working directory
