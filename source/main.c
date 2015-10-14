@@ -1,4 +1,4 @@
-#include "processVector.h"
+#include "processManager.h"
 #include "commandlinereader.h"
 #include "defines.h"
 #include <stdio.h>
@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/wait.h>
+
 #define N_ARGS 5
 int runningProcesses=0;
 int exitCalled=0;
@@ -14,44 +15,12 @@ int exitCalled=0;
 void newProcess(char * const *args);
 void exitParShell();
 void showPrompt();
-
-void * processMonitor(void * skip) {
-  int pid, status;
-  while(1) {
-    //bloqueia mutex
-    if (runningProcesses > 0) {
-      //desbloqueia mutex
-      pid = wait(&status);
-      //bloqueia mutex
-      endProcess(pid, status);
-      runningProcesses--;
-    }
-    //desbloqueia mutex
-    //bloqueia
-    if (runningProcesses == 0) {
-      //desbloqueia
-      sleep(1);
-    }
-    else {
-      //desbloqueia
-    }
-
-    //bloqueia
-    //bloqueia2
-    if (runningProcesses == 0 && exitCalled) {
-      //desbloqueia
-      break;
-    }
-    else {
-      //desbloqueia
-    }
-  }
-  return NULL;
-}
+void * processMonitor(void * skip);
 
 int main() {
   pthread_t threadMonitor;
   char *args[N_ARGS];
+  initProcessManager();
 
   if(pthread_create (&threadMonitor, 0,processMonitor, NULL)!= 0) {
     printf("Erro na criação da tarefa\n");
@@ -70,9 +39,50 @@ int main() {
   //desbloqueia mutex
 
   pthread_join(threadMonitor, NULL);
+
+  //The following function is called after all threads have joined, therefore there aren't used any mutexes
   exitParShell();
 
   return 0;
+}
+
+/*
+  Process Monitor thread, for monitor processes running time
+*/
+void * processMonitor(void * skip) {
+  int pid, status;
+  while(1) {
+    //bloqueia mutex
+    if (runningProcesses > 0) {
+      //desbloqueia mutex
+      pid = wait(&status);
+      //bloqueia mutex
+      endProcess(pid, status);
+      runningProcesses--;
+      //desbloqueia mutex
+    } else {
+      //desbloqueia mutex
+    }
+    //bloqueia
+    if (runningProcesses == 0) {
+      //desbloqueia
+      sleep(1);
+    }
+    else {
+      //desbloqueia
+    }
+
+    //bloqueia
+    //bloqueia2
+    if (runningProcesses == 0 && exitCalled) {
+      //desbloqueia1e2
+      break;
+    }
+    else {
+      //desbloqueia1e2
+    }
+  }
+  return NULL;
 }
 
 /*
@@ -83,7 +93,7 @@ void newProcess(char * const *args) {
   if (pid == 0) {
     execv(args[0], args);
     fprintf(stderr, "Erro no carregamento do programa %s\n", args[0]);
-    exit(-1);
+    exit(127);
   }
   else if (pid == -1) { //if fork failed
     perror("Erro na criação do processo-filho:\n");
@@ -104,11 +114,9 @@ void exitParShell() {
   int n = getProcessCount();
   //output the returnCodes for all child processes
   for (i=0; i<n; i++) {
-    printExitStatus(getProcessPid(i), getProcessStatus(i), getRunningTime(i));
+    printExitStatus(i);
   }
 }
-
-
 
 /*
   Outputs to stdout the current working directory
