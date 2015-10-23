@@ -1,21 +1,33 @@
+#include "processManager.h"
 #include "commandlinereader.h"
 #include "defines.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <sys/wait.h>
+
 #define N_ARGS 5
-int runningProcesses = 0;
+int runningProcesses=0;
+int exitCalled=0;
+pthread_mutex_t mutexRunningProcesses;
 
 void newProcess(char * const *args);
 void exitParShell();
-void printExitStatus(int pid, int status);
 void showPrompt();
-
+void * processMonitor(void * skip);
 
 int main() {
+  pthread_t threadMonitor;
   char *args[N_ARGS];
+  pthread_mutex_init(&mutexRunningProcesses, NULL);
+  initProcessManager();
+
+  if(pthread_create(&threadMonitor, 0,processMonitor, NULL)!= 0) {
+    printf("Erro na criação da tarefa\n");
+    exit(-1);
+  }
 
   while(1) {
     //showPrompt(); //?
@@ -24,9 +36,64 @@ int main() {
     newProcess(args);
   }
 
+  
+  exitCalled = 1;
+  
+
+  pthread_join(threadMonitor, NULL);
+
+  //The following function is called after all threads have joined, therefore there aren't used any mutexes
   exitParShell();
+  endProcessManager();
+  pthread_mutex_destroy(&mutexRunningProcesses);
 
   return 0;
+}
+
+/*
+  Process Monitor thread, for monitor processes running time
+*/
+void * processMonitor(void * skip) {
+  int pid, status;
+  while(1) {
+    pthread_mutex_lock(&mutexRunningProcesses);
+    if (runningProcesses > 0) {
+      pthread_mutex_unlock(&mutexRunningProcesses);
+      pid = wait(&status);
+  	  if (pid < 0) {
+  	  	if (errno == EINTR) continue;
+  	  	else {
+  	   	 perror("Error waiting for child.");
+  	   	 exit (EXIT_FAILURE);
+  	  	}
+  	  }
+      endProcess(pid, status);
+      pthread_mutex_lock(&mutexRunningProcesses);
+      runningProcesses--;
+      pthread_mutex_unlock(&mutexRunningProcesses);
+    }
+    else  {
+  		pthread_mutex_unlock(&mutexRunningProcesses);
+    }
+    pthread_mutex_lock(&mutexRunningProcesses);
+    if (runningProcesses == 0) {
+      pthread_mutex_unlock(&mutexRunningProcesses);
+      sleep(1);
+    }
+    else {
+   		pthread_mutex_unlock(&mutexRunningProcesses);
+    }
+
+    pthread_mutex_lock(&mutexRunningProcesses);
+    if (runningProcesses == 0 && exitCalled) {
+      pthread_mutex_unlock(&mutexRunningProcesses);
+      break;
+    }
+    else {
+      pthread_mutex_unlock(&mutexRunningProcesses);
+    }
+  }
+  return NULL;
 }
 
 /*
@@ -37,13 +104,16 @@ void newProcess(char * const *args) {
   if (pid == 0) {
     execv(args[0], args);
     fprintf(stderr, "Erro no carregamento do programa %s\n", args[0]);
-    exit(-1);
+    exit(127);
   }
   else if (pid == -1) { //if fork failed
     perror("Erro na criação do processo-filho:\n");
   }
   else { //fork worked and we are in the parent process
+    addProcess(pid);
+    pthread_mutex_lock(&mutexRunningProcesses);
     runningProcesses++;
+    pthread_mutex_unlock(&mutexRunningProcesses);
   }
 }
 
@@ -52,52 +122,10 @@ void newProcess(char * const *args) {
 */
 void exitParShell() {
   int i;
-  int *returnCodes = NULL;
-  int *pids = NULL;
-  pids = malloc(sizeof(int) * runningProcesses);
-  returnCodes = malloc(sizeof(int) * runningProcesses);
-  TESTMEM(pids); //checks if malloc worked
-  TESTMEM(returnCodes);
-
-  //wait for all the child processes to finish
-  for (i=0; i<runningProcesses; i++) {
-    pids[i] = wait(returnCodes + i);
-  }
-
-
+  int n = getProcessCount();
   //output the returnCodes for all child processes
-  while(runningProcesses--) {
-    printExitStatus(pids[runningProcesses], returnCodes[runningProcesses]);
-  }
-  free(pids);
-  free(returnCodes);
-}
-
-/*
-  Prints the exit status of a process based on status
-*/
-void printExitStatus(int pid, int status) {
-  printf("Process %d terminated", pid);
-
-  //Caso o processo tenha terminado apos chamar o exit():
-  if (WIFEXITED(status)) {
-    if (status == 0) {
-      printf(" normally with success!\n");
-    }
-    else {
-      printf(" normally returning %d\n", WEXITSTATUS(status));
-    }
-  }
-
-  //Caso o processo tenha sido terminado por um sinal:
-  if (WTERMSIG(status)) {
-    printf(" with signal %d (%s)", WTERMSIG(status), strsignal(WTERMSIG(status)));
-    #ifdef WCOREDUMP
-      if (WCOREDUMP(status)) {
-        printf(" (core dumped)");
-      }
-    #endif
-    printf("\n");
+  for (i=0; i<n; i++) {
+    printExitStatus(i);
   }
 }
 
