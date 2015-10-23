@@ -1,10 +1,9 @@
 #include "processManager.h"
 
 typedef struct PROCESSES {
-  int dimension;
-  int allocated;
-  pthread_mutex_t mutexVector;
-  RunningProcess * vRunningProcess;
+  pthread_mutex_t mutexList;
+  RunningProcess * first;
+  RunningProcess * tail;
 } vProcesses;
 static vProcesses processes;
 
@@ -13,74 +12,82 @@ static vProcesses processes;
   Initiates the ProcessManager class
 */
 void initProcessManager() {
-  pthread_mutex_init(&processes.mutexVector, NULL);
-  processes.dimension=0;
-  processes.allocated=1;
-  processes.vRunningProcess=malloc(sizeof(RunningProcess));
+  pthread_mutex_init(&processes.mutexList, NULL);
+  processes.first = NULL;
 }
 
 void endProcessManager() {
-  pthread_mutex_destroy(&processes.mutexVector);
+  pthread_mutex_destroy(&processes.mutexList);
+  RunningProcess * item, * nextitem;
+  item = processes.first;
+	while (item != NULL){
+		nextitem = item->next;
+		free(item);
+		item = nextitem;
+	}
+  processes.first = NULL;
+  processes.tail = NULL;
 }
 
 /*
   Add a new process to the processes vector
 */
 void addProcess(int processId) {
-  pthread_mutex_lock(&processes.mutexVector);
-  if (processes.dimension == processes.allocated) {
-    RunningProcess * x = malloc(2*processes.allocated*sizeof(RunningProcess));
-    memcpy(x, processes.vRunningProcess, processes.allocated*sizeof(RunningProcess));
-    processes.allocated*=2;
-    free(processes.vRunningProcess);
-    processes.vRunningProcess = x;
+  RunningProcess * item = malloc(sizeof(RunningProcess));
+  TESTMEM(item);
+  item->pid = processId;
+  clock_gettime( CLOCK_MONOTONIC, &(item->startTime));
+  item->running = 1;
+  item->next = NULL;
+  pthread_mutex_lock(&processes.mutexList);
+  if (processes.tail!=NULL) {
+    processes.tail->next = item;
+    processes.tail = item;
+  } else {
+    processes.first = processes.tail = item;
   }
-  processes.vRunningProcess[processes.dimension].pid = processId;
-  clock_gettime( CLOCK_MONOTONIC, &(processes.vRunningProcess[processes.dimension].startTime));
-  processes.vRunningProcess[processes.dimension].running = 1;
-  processes.dimension++;
-  pthread_mutex_unlock(&processes.mutexVector);
+  pthread_mutex_unlock(&processes.mutexList);
 }
 
 /*
   Marks a process in the processes vector as ended
 */
 void endProcess(int processId, int status) {
-  int i;
-  pthread_mutex_lock(&processes.mutexVector);
-  for (i=0; i<processes.dimension; i++) {
-    if (processes.vRunningProcess[i].pid == processId && processes.vRunningProcess[i].running!=0) break;
+  RunningProcess * item;
+  pthread_mutex_lock(&processes.mutexList);
+  item = processes.first;
+  while(item!=NULL) {
+    if (item->pid == processId && item->running != 0) break;
+    item = item->next;
   }
-  processes.vRunningProcess[i].status = status;
-  processes.vRunningProcess[i].running = 0;
-  clock_gettime( CLOCK_MONOTONIC, &(processes.vRunningProcess[i].endTime));
-  pthread_mutex_unlock(&processes.mutexVector);
+  if (item != NULL) {
+    item->status = status;
+    item->running = 0;
+    clock_gettime( CLOCK_MONOTONIC, &(item->endTime));
+  }
+  pthread_mutex_unlock(&processes.mutexList);
 }
 
 /*
   Returns the real running time for process i
 */
-double getRunningTime(int i) {
+double getRunningTime(RunningProcess * item) {
   double ans;
-  pthread_mutex_lock(&processes.mutexVector);
-  ans = ( processes.vRunningProcess[i].endTime.tv_sec - processes.vRunningProcess[i].startTime.tv_sec )
-             + (double)( processes.vRunningProcess[i].endTime.tv_nsec - processes.vRunningProcess[i].startTime.tv_nsec )
+  ans = ( item->endTime.tv_sec - item->startTime.tv_sec )
+             + (double)( item->endTime.tv_nsec - item->startTime.tv_nsec )
                / (double)1000000000;
-  pthread_mutex_unlock(&processes.mutexVector);
   return ans;
 }
 
 /*
   Prints the exit status of a process based on status
 */
-void printExitStatus(int i) {
+void printExitStatus(RunningProcess * item) {
   int pid, status;
   double runningTime;
-  pthread_mutex_lock(&processes.mutexVector);
-  pid = processes.vRunningProcess[i].pid;
-  status = processes.vRunningProcess[i].status;
-  pthread_mutex_unlock(&processes.mutexVector);
-  runningTime = getRunningTime(i);
+  pid = item->pid;
+  status = item->status;
+  runningTime = getRunningTime(item);
   printf("Process %d terminated", pid);
 
   //Caso o processo tenha terminado apos chamar o exit():
@@ -106,11 +113,6 @@ void printExitStatus(int i) {
   printf("It took %.4f seconds\n", runningTime);
 }
 
-
-int getProcessCount() {
-  int ans;
-  pthread_mutex_lock(&processes.mutexVector);
-  ans = processes.dimension;
-  pthread_mutex_unlock(&processes.mutexVector);
-  return ans;
+RunningProcess * getFirstRunningProccess() {
+  return processes.first;
 }

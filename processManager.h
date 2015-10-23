@@ -7,6 +7,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <string.h>
+#include "defines.h"
 
 typedef struct RUNNING_PROCESS {
   int running;
@@ -21,10 +22,8 @@ void initProcessManager();
 void endProcessManager();
 void addProcess(int proccessId);
 void endProcess(int proccessId, int status);
-void printExitStatus(int);
-int getProcessCount();
-int getProcessPid(int);
-int getProcessStatus(int);
-double getRunningTime(int);
+void printExitStatus(RunningProcess *);
+double getRunningTime(RunningProcess *);
+RunningProcess * getFirstRunningProccess();
 
 #endif

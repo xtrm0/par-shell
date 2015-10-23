@@ -28,17 +28,16 @@ int main() {
     printf("Erro na criação da tarefa\n");
     exit(-1);
   }
-
   while(1) {
     //showPrompt(); //?
     if (readLineArguments(args, N_ARGS) <= 0) continue;
-    if (strcmp(args[0],"exit") == 0) break;
+    if (strcmp(args[0],"exit") == 0 ) break;
     newProcess(args);
   }
 
-  
+
   exitCalled = 1;
-  
+
 
   pthread_join(threadMonitor, NULL);
 
@@ -121,11 +120,10 @@ void newProcess(char * const *args) {
   Gracefully exists parshell
 */
 void exitParShell() {
-  int i;
-  int n = getProcessCount();
-  //output the returnCodes for all child processes
-  for (i=0; i<n; i++) {
-    printExitStatus(i);
+  RunningProcess * item = getFirstRunningProccess();
+  while (item!=NULL) {
+    printExitStatus(item);
+    item = item->next;
   }
 }
 
