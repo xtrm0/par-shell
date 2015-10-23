@@ -66,7 +66,7 @@ double getRunningTime(int i) {
   ans = ( processes.vRunningProcess[i].endTime.tv_sec - processes.vRunningProcess[i].startTime.tv_sec )
              + (double)( processes.vRunningProcess[i].endTime.tv_nsec - processes.vRunningProcess[i].startTime.tv_nsec )
                / (double)1000000000;
-  pthread_mutex_unlock(&processes.mutexVector);               
+  pthread_mutex_unlock(&processes.mutexVector);
   return ans;
 }
 

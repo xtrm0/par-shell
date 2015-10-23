@@ -14,6 +14,7 @@ typedef struct RUNNING_PROCESS {
   int status;
   struct timespec startTime;
   struct timespec endTime;
+  struct RUNNING_PROCESS * next;
 } RunningProcess;
 
 void initProcessManager();
