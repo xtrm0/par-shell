@@ -46,7 +46,7 @@ int main() {
   endProcessManager();
   pthread_mutex_destroy(&mutexRunningProcesses);
 
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 /*
@@ -103,7 +103,7 @@ void newProcess(char * const *args) {
   if (pid == 0) {
     execv(args[0], args);
     fprintf(stderr, "Erro no carregamento do programa %s\n", args[0]);
-    exit(127);
+    exit(EXIT_FAILURE);
   }
   else if (pid == -1) { //if fork failed
     perror("Erro na criação do processo-filho:\n");
