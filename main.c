@@ -6,12 +6,15 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <sys/wait.h>
 
+#define MAXPAR 4
 #define N_ARGS 5
 int runningProcesses=0;
 int exitCalled=0;
-pthread_mutex_t mutexRunningProcesses;
+sem_t semRunningProcesses;
+sem_t semFreeSlots;
 
 void newProcess(char * const *args);
 void exitParShell();
@@ -21,7 +24,8 @@ void * processMonitor(void * skip);
 int main() {
   pthread_t threadMonitor;
   char *args[N_ARGS];
-  pthread_mutex_init(&mutexRunningProcesses, NULL);
+  sem_init(&semRunningProcesses, 0, 0);
+  sem_init(&semFreeSlots, 0, MAXPAR);
   initProcessManager();
 
   if(pthread_create(&threadMonitor, 0,processMonitor, NULL)!= 0) {
@@ -35,7 +39,7 @@ int main() {
     newProcess(args);
   }
 
-
+  sem_post(&semRunningProcesses); //fazemos post para deixar o processes monitor processar o comando exit
   exitCalled = 1;
 
 
@@ -44,7 +48,9 @@ int main() {
   //The following function is called after all threads have joined, therefore there aren't used any mutexes
   exitParShell();
   endProcessManager();
-  pthread_mutex_destroy(&mutexRunningProcesses);
+  
+  sem_destroy(&semRunningProcesses);
+  sem_destroy(&semFreeSlots);
 
   return EXIT_SUCCESS;
 }
@@ -54,43 +60,28 @@ int main() {
 */
 void * processMonitor(void * skip) {
   int pid, status;
-  while(1) {
-    pthread_mutex_lock(&mutexRunningProcesses);
-    if (runningProcesses > 0) {
-      pthread_mutex_unlock(&mutexRunningProcesses);
-      pid = wait(&status);
-  	  if (pid < 0) {
-  	  	if (errno == EINTR) continue;
-  	  	else {
-  	   	 perror("Error waiting for child.");
-  	   	 exit (EXIT_FAILURE);
-  	  	}
-  	  }
-      endProcess(pid, status);
-      pthread_mutex_lock(&mutexRunningProcesses);
-      runningProcesses--;
-      pthread_mutex_unlock(&mutexRunningProcesses);
-    }
-    else  {
-  		pthread_mutex_unlock(&mutexRunningProcesses);
-    }
-    pthread_mutex_lock(&mutexRunningProcesses);
-    if (runningProcesses == 0) {
-      pthread_mutex_unlock(&mutexRunningProcesses);
-      sleep(1);
-    }
-    else {
-   		pthread_mutex_unlock(&mutexRunningProcesses);
-    }
-
-    pthread_mutex_lock(&mutexRunningProcesses);
-    if (runningProcesses == 0 && exitCalled) {
-      pthread_mutex_unlock(&mutexRunningProcesses);
+  int semVal;
+  while(1) { 
+    sem_wait(&semRunningProcesses);
+    
+    sem_getvalue(&semRunningProcesses, &semVal);
+    if (semVal == 0 && exitCalled) {
       break;
     }
-    else {
-      pthread_mutex_unlock(&mutexRunningProcesses);
-    }
+
+    pid = wait(&status);
+	if (pid < 0) {
+  	  if (errno == EINTR) continue;
+  	  else {
+  	   	perror("Error waiting for child.");
+  	   	exit (EXIT_FAILURE);
+  	  }
+  	} 
+  	else {
+  	  sem_post(&semFreeSlots);
+  	}
+    endProcess(pid, status);
+	
   }
   return NULL;
 }
@@ -99,7 +90,9 @@ void * processMonitor(void * skip) {
   Creates a new process and runs the program specified by args[0]
 */
 void newProcess(char * const *args) {
-  int pid = fork();
+  int pid;
+  sem_wait(&semFreeSlots);
+  pid = fork();
   if (pid == 0) {
     execv(args[0], args);
     fprintf(stderr, "Erro no carregamento do programa %s\n", args[0]);
@@ -110,9 +103,7 @@ void newProcess(char * const *args) {
   }
   else { //fork worked and we are in the parent process
     addProcess(pid);
-    pthread_mutex_lock(&mutexRunningProcesses);
-    runningProcesses++;
-    pthread_mutex_unlock(&mutexRunningProcesses);
+    sem_post(&semRunningProcesses);
   }
 }
 
