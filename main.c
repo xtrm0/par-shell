@@ -1,4 +1,4 @@
-#include "processManager.h"
+#include "processList.h"
 #include "commandlinereader.h"
 #include "defines.h"
 #include <stdio.h>
@@ -24,9 +24,13 @@ void * processMonitor(void * skip);
 int main() {
   pthread_t threadMonitor;
   char *args[N_ARGS];
-  sem_init(&semRunningProcesses, 0, 0);
-  sem_init(&semFreeSlots, 0, MAXPAR);
-  initProcessManager();
+  if (sem_init(&semRunningProcesses, 0, 0)) {
+    perror("Could not create semaphore for counting running processes\n");
+  }
+  if (sem_init(&semFreeSlots, 0, MAXPAR)) {
+    perror("Could not create semaphore for counting free slots for running processes\n");
+  }
+  initProcessList();
 
   if(pthread_create(&threadMonitor, 0,processMonitor, NULL)!= 0) {
     printf("Erro na criação da tarefa\n");
@@ -47,8 +51,8 @@ int main() {
 
   //The following function is called after all threads have joined, therefore there aren't used any mutexes
   exitParShell();
-  endProcessManager();
-  
+  endProcessList();
+
   sem_destroy(&semRunningProcesses);
   sem_destroy(&semFreeSlots);
 
@@ -56,34 +60,35 @@ int main() {
 }
 
 /*
-  Process Monitor thread, for monitor processes running time
+  Process Monitor thread, for monitoring processes running time
 */
 void * processMonitor(void * skip) {
   int pid, status;
   int semVal;
-  while(1) { 
+  while(1) {
     sem_wait(&semRunningProcesses);
-    
+
     sem_getvalue(&semRunningProcesses, &semVal);
     if (semVal == 0 && exitCalled) {
       break;
     }
 
     pid = wait(&status);
-	if (pid < 0) {
+	  if (pid < 0) {
   	  if (errno == EINTR) continue;
   	  else {
+        sem_post(&semRunningProcesses);
   	   	perror("Error waiting for child.");
   	   	exit (EXIT_FAILURE);
   	  }
-  	} 
+  	}
   	else {
   	  sem_post(&semFreeSlots);
   	}
     endProcess(pid, status);
-	
+
   }
-  return NULL;
+  pthread_exit(NULL);
 }
 
 /*
@@ -99,6 +104,7 @@ void newProcess(char * const *args) {
     exit(EXIT_FAILURE);
   }
   else if (pid == -1) { //if fork failed
+    sem_post(&semFreeSlots);
     perror("Erro na criação do processo-filho:\n");
   }
   else { //fork worked and we are in the parent process

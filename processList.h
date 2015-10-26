@@ -18,8 +18,8 @@ typedef struct RUNNING_PROCESS {
   struct RUNNING_PROCESS * next;
 } RunningProcess;
 
-void initProcessManager();
-void endProcessManager();
+void initProcessList();
+void endProcessList();
 void addProcess(int proccessId);
 void endProcess(int proccessId, int status);
 void printExitStatus(RunningProcess *);

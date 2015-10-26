@@ -1,4 +1,4 @@
-#include "processManager.h"
+#include "processList.h"
 
 typedef struct PROCESSES {
   pthread_mutex_t mutexList;
@@ -9,14 +9,16 @@ static vProcesses processes;
 
 
 /*
-  Initiates the ProcessManager class
+  Initiates the ProcessList class
 */
-void initProcessManager() {
-  pthread_mutex_init(&processes.mutexList, NULL);
+void initProcessList() {
+  if (pthread_mutex_init(&processes.mutexList, NULL)) {
+    fprintf(stderr, "Could not create ProcessList mutex\n");
+  }
   processes.first = NULL;
 }
 
-void endProcessManager() {
+void endProcessList() {
   pthread_mutex_destroy(&processes.mutexList);
   RunningProcess * item, * nextitem;
   item = processes.first;
@@ -54,6 +56,9 @@ void addProcess(int processId) {
 */
 void endProcess(int processId, int status) {
   RunningProcess * item;
+  struct timespec endTime;
+  clock_gettime( CLOCK_MONOTONIC, &endTime);
+
   pthread_mutex_lock(&processes.mutexList);
   item = processes.first;
   while(item!=NULL) {
@@ -63,7 +68,7 @@ void endProcess(int processId, int status) {
   if (item != NULL) {
     item->status = status;
     item->running = 0;
-    clock_gettime( CLOCK_MONOTONIC, &(item->endTime));
+    item->endTime = endTime;
   }
   pthread_mutex_unlock(&processes.mutexList);
 }
