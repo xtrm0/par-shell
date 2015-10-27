@@ -75,9 +75,9 @@ void * processMonitor(void * skip) {
 
     pid = wait(&status);
 	  if (pid < 0) {
+      sem_post(&semRunningProcesses);
   	  if (errno == EINTR) continue;
   	  else {
-        sem_post(&semRunningProcesses);
   	   	perror("Error waiting for child.");
   	   	exit (EXIT_FAILURE);
   	  }
