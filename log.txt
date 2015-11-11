@@ -1,0 +1,63 @@
+iteracao 0
+pid: 5663 execution time: 0.0018 s
+total execution time: 0.0018 s
+iteracao 1
+pid: 5664 execution time: 0.0019 s
+total execution time: 0.0037 s
+iteracao 2
+pid: 5665 execution time: 20.0016 s
+total execution time: 20.0054 s
+iteracao 3
+pid: 5668 execution time: 20.0023 s
+total execution time: 40.0076 s
+iteracao 4
+pid: 5669 execution time: 20.0016 s
+total execution time: 60.0092 s
+iteracao 5
+pid: 5666 execution time: 30.0016 s
+total execution time: 90.0108 s
+iteracao 6
+pid: 5671 execution time: 20.0016 s
+total execution time: 110.0124 s
+iteracao 7
+pid: 5672 execution time: 20.0016 s
+total execution time: 130.0140 s
+iteracao 8
+pid: 5747 execution time: 0.0020 s
+total execution time: 130.0160 s
+iteracao 9
+pid: 5748 execution time: 0.0022 s
+total execution time: 130.0182 s
+iteracao 10
+pid: 5749 execution time: 20.0016 s
+total execution time: 150.0198 s
+iteracao 11
+pid: 5750 execution time: 20.0017 s
+total execution time: 170.0215 s
+iteracao 12
+pid: 5751 execution time: 20.0017 s
+total execution time: 190.0232 s
+iteracao 13
+pid: 5755 execution time: 0.0079 s
+total execution time: 190.0311 s
+iteracao 14
+pid: 5754 execution time: 10.0016 s
+total execution time: 200.0327 s
+iteracao 15
+pid: 5756 execution time: 10.0015 s
+total execution time: 210.0342 s
+iteracao 16
+pid: 5752 execution time: 30.0016 s
+total execution time: 240.0358 s
+iteracao 17
+pid: 5753 execution time: 20.0016 s
+total execution time: 260.0374 s
+iteracao 18
+pid: 5757 execution time: 10.0016 s
+total execution time: 270.0391 s
+iteracao 19
+pid: 5758 execution time: 10.0016 s
+total execution time: 280.0407 s
+iteracao 20
+pid: 5760 execution time: 10.0017 s
+total execution time: 290.0424 s

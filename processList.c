@@ -4,6 +4,9 @@ typedef struct PROCESSES {
   pthread_mutex_t mutexList;
   RunningProcess * first;
   RunningProcess * tail;
+  FILE * output;
+  int iteration;
+  double totalTime;
 } vProcesses;
 static vProcesses processes;
 
@@ -12,10 +15,30 @@ static vProcesses processes;
   Initiates the ProcessList class
 */
 void initProcessList() {
+  char inp[3][200];
+  int c;
   if (pthread_mutex_init(&processes.mutexList, NULL)) {
     fprintf(stderr, "Could not create ProcessList mutex\n");
   }
   processes.first = NULL;
+  processes.output = fopen("log.txt", "a+");
+  TESTMEM(processes.output);
+  if (fgets(inp[0], 2, processes.output)==NULL) {
+    processes.iteration = 0;
+    processes.totalTime = 0.0;
+  } else {
+    rewind(processes.output);
+    while ((c=fgetc(processes.output))!=EOF) {
+      ungetc(c, processes.output);
+      fgets(inp[0], 200, processes.output);
+      fgets(inp[1], 200, processes.output);
+      fgets(inp[2], 200, processes.output);
+    }
+    sscanf(inp[0], "iteracao %d", &(processes.iteration));
+    processes.iteration += 1;
+    sscanf(inp[2], "total execution time: %lf s", &(processes.totalTime));
+  }
+  //printf("Lidos: %d, %f", processes.iteration, processes.totalTime);
 }
 
 void endProcessList() {
@@ -27,6 +50,7 @@ void endProcessList() {
 		free(item);
 		item = nextitem;
 	}
+  fclose(processes.output);
   processes.first = NULL;
   processes.tail = NULL;
 }
@@ -56,6 +80,7 @@ void addProcess(int processId) {
 */
 void endProcess(int processId, int status) {
   RunningProcess * item;
+  double ptime;
   struct timespec endTime;
   clock_gettime( CLOCK_MONOTONIC, &endTime);
 
@@ -71,6 +96,13 @@ void endProcess(int processId, int status) {
     item->endTime = endTime;
   }
   pthread_mutex_unlock(&processes.mutexList);
+  //XXX: se esta funcao puder correr em mais que uma tarefa, por os fprints dentro de um mutex
+  ptime = getRunningTime(item);
+  processes.totalTime += ptime;
+  fprintf(processes.output,"iteracao %d\n", processes.iteration);
+  fprintf(processes.output,"pid: %d execution time: %.4f s\n", item->pid, ptime);
+  fprintf(processes.output,"total execution time: %.4f s\n", processes.totalTime);
+  processes.iteration++;
 }
 
 /*
