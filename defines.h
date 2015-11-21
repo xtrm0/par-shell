@@ -11,7 +11,7 @@
 
 #define TESTNULL(s, err) if (!s) {\
   fprintf(stderr, err);\
-  exit(ENOMEM);\
+  exit(-1);\
 }
 
 #define M_LOCK(mutex) \

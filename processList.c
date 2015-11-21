@@ -18,6 +18,7 @@ static vProcesses processes;
 void initProcessList() {
   char inp[4][200];
   int c;
+  int i;
   if (pthread_mutex_init(&processes.mutexList, NULL)) {
     fprintf(stderr, "Could not create ProcessList mutex\n");
   }
@@ -29,21 +30,8 @@ void initProcessList() {
   TESTNULL(processes.output, "Erro ao abrir ficheiro");
   while ((c=fgetc(processes.output))!=EOF) {
     ungetc(c, processes.output);
-    if(!fgets(inp[0], 200, processes.output)) {
-      fprintf(stderr, "Invalid log file!!!\n");
-      exit(-1);
-    }
-    if(!fgets(inp[1], 200, processes.output)) {
-      fprintf(stderr, "Invalid log file!!!\n");
-      exit(-1);
-    }
-    if(!fgets(inp[2], 200, processes.output)) {
-      fprintf(stderr, "Invalid log file!!!\n");
-      exit(-1);
-    }
-    if(!fgets(inp[3], 200, processes.output)) {
-      fprintf(stderr, "Invalid log file!!!\n");
-      exit(-1);
+    for (i=0; i<4; i++) {
+      TESTNULL(fgets(inp[i], 200, processes.output), "Invalid log file!!!");
     }
     TESTNULL(sscanf(inp[0], "iteracao %d", &(processes.iteration)), "Ficheiro Invalido");
     processes.iteration += 1;
