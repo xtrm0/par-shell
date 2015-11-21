@@ -9,4 +9,33 @@
   exit(ENOMEM);\
 }
 
+#define TESTNULL(s, err) if (!s) {\
+  fprintf(stderr, err);\
+  exit(ENOMEM);\
+}
+
+#define M_LOCK(mutex) \
+ if (pthread_mutex_lock(mutex)) { \
+  perror("Error locking mutex"); \
+  exit(EXIT_FAILURE); \
+ }
+
+#define M_UNLOCK(mutex) \
+ if (pthread_mutex_unlock(mutex)) { \
+  perror("Error unlocking mutex"); \
+  exit(EXIT_FAILURE); \
+ }
+
+#define C_WAIT(condition, mutex) \
+ if (pthread_cond_wait(condition, mutex)) { \
+  perror("Error waiting on condition"); \
+  exit(EXIT_FAILURE); \
+ }
+
+#define C_SIGNAL(condition) \
+ if (pthread_cond_signal(condition)) { \
+  perror("Error signaling on condition"); \
+  exit(EXIT_FAILURE); \
+ }
+
 #endif

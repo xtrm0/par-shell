@@ -6,6 +6,7 @@ typedef struct PROCESSES {
   RunningProcess * tail;
   FILE * output;
   int iteration;
+  int successProcesses;
   double totalTime;
 } vProcesses;
 static vProcesses processes;
@@ -15,30 +16,40 @@ static vProcesses processes;
   Initiates the ProcessList class
 */
 void initProcessList() {
-  char inp[3][200];
+  char inp[4][200];
   int c;
   if (pthread_mutex_init(&processes.mutexList, NULL)) {
     fprintf(stderr, "Could not create ProcessList mutex\n");
   }
+  processes.iteration = 0;
+  processes.successProcesses = 0;
+  processes.totalTime = 0.0;
   processes.first = NULL;
   processes.output = fopen("log.txt", "a+");
-  TESTMEM(processes.output);
-  if (fgets(inp[0], 2, processes.output)==NULL) {
-    processes.iteration = 0;
-    processes.totalTime = 0.0;
-  } else {
-    rewind(processes.output);
-    while ((c=fgetc(processes.output))!=EOF) {
-      ungetc(c, processes.output);
-      fgets(inp[0], 200, processes.output);
-      fgets(inp[1], 200, processes.output);
-      fgets(inp[2], 200, processes.output);
+  TESTNULL(processes.output, "Erro ao abrir ficheiro");
+  while ((c=fgetc(processes.output))!=EOF) {
+    ungetc(c, processes.output);
+    if(!fgets(inp[0], 200, processes.output)) {
+      fprintf(stderr, "Invalid log file!!!\n");
+      exit(-1);
     }
-    sscanf(inp[0], "iteracao %d", &(processes.iteration));
+    if(!fgets(inp[1], 200, processes.output)) {
+      fprintf(stderr, "Invalid log file!!!\n");
+      exit(-1);
+    }
+    if(!fgets(inp[2], 200, processes.output)) {
+      fprintf(stderr, "Invalid log file!!!\n");
+      exit(-1);
+    }
+    if(!fgets(inp[3], 200, processes.output)) {
+      fprintf(stderr, "Invalid log file!!!\n");
+      exit(-1);
+    }
+    TESTNULL(sscanf(inp[0], "iteracao %d", &(processes.iteration)), "Ficheiro Invalido");
     processes.iteration += 1;
-    sscanf(inp[2], "total execution time: %lf s", &(processes.totalTime));
+    TESTNULL(sscanf(inp[2], "total execution time: %lf s", &(processes.totalTime)), "Ficheiro Invalido");
+    TESTNULL(sscanf(inp[3], "successful children: %d", &(processes.successProcesses)), "Ficheiro Invalido");
   }
-  //printf("Lidos: %d, %f", processes.iteration, processes.totalTime);
 }
 
 void endProcessList() {
@@ -65,14 +76,14 @@ void addProcess(int processId) {
   clock_gettime( CLOCK_MONOTONIC, &(item->startTime));
   item->running = 1;
   item->next = NULL;
-  pthread_mutex_lock(&processes.mutexList);
+  M_LOCK(&processes.mutexList);
   if (processes.tail!=NULL) {
     processes.tail->next = item;
     processes.tail = item;
   } else {
     processes.first = processes.tail = item;
   }
-  pthread_mutex_unlock(&processes.mutexList);
+  M_UNLOCK(&processes.mutexList);
 }
 
 /*
@@ -84,7 +95,7 @@ void endProcess(int processId, int status) {
   struct timespec endTime;
   clock_gettime( CLOCK_MONOTONIC, &endTime);
 
-  pthread_mutex_lock(&processes.mutexList);
+  M_LOCK(&processes.mutexList);
   item = processes.first;
   while(item!=NULL) {
     if (item->pid == processId && item->running != 0) break;
@@ -94,14 +105,18 @@ void endProcess(int processId, int status) {
     item->status = status;
     item->running = 0;
     item->endTime = endTime;
+    if(item->status == 0) {
+      processes.successProcesses++;
+    }
   }
-  pthread_mutex_unlock(&processes.mutexList);
+  M_UNLOCK(&processes.mutexList);
   //XXX: se esta funcao puder correr em mais que uma tarefa, por os fprints dentro de um mutex
   ptime = getRunningTime(item);
   processes.totalTime += ptime;
   fprintf(processes.output,"iteracao %d\n", processes.iteration);
   fprintf(processes.output,"pid: %d execution time: %.4f s\n", item->pid, ptime);
   fprintf(processes.output,"total execution time: %.4f s\n", processes.totalTime);
+  fprintf(processes.output,"successful children: %d\n", processes.successProcesses);
   processes.iteration++;
 }
 

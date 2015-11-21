@@ -2,6 +2,8 @@
 #compilador:
 CC = gcc -Wall -O3 -Ofast
 
+all: par-shell fibonacci
+
 #regra para compilar ./par-shell
 par-shell: commandlinereader.o processList.o main.o
 	$(CC) -o par-shell main.o commandlinereader.o processList.o -lpthread -lm
@@ -21,7 +23,8 @@ processList.o: processList.c processList.h
 #pseudo regras: (nao definem ficheiros para compilar, mas sim modos de funcionamento do make)
 .PHONY: all clean
 
-all: par-shell
-
 clean:
-	rm ./*.o ./par-shell
+	rm -f ./*.o ./par-shell ./fibonacci log.txt
+
+fibonacci: fibonacci.c
+	gcc fibonacci.c -o fibonacci

@@ -52,7 +52,7 @@ int main() {
   }
 
   exitCalled = 1;
-  pthread_cond_signal(&condRunningProcesses);
+  C_SIGNAL(&condRunningProcesses);
 
   pthread_join(threadMonitor, NULL);
 
@@ -73,15 +73,15 @@ int main() {
 void * processMonitor(void * skip) {
   int pid, status;
   while(1) {
-    pthread_mutex_lock(&mutexRunningProcesses);
+    M_LOCK(&mutexRunningProcesses);
     while(runningProcesses==0) {
       if (exitCalled && processesWaitingToRun==0) {
-        goto endProcessMonitorThread;
+        pthread_exit(NULL);
       }
-      pthread_cond_wait(&condRunningProcesses, &mutexRunningProcesses);
+      C_WAIT(&condRunningProcesses, &mutexRunningProcesses);
     }
 
-    pthread_mutex_unlock(&mutexRunningProcesses);
+    M_UNLOCK(&mutexRunningProcesses);
 
     pid = wait(&status);
 	  if (pid < 0) {
@@ -92,15 +92,13 @@ void * processMonitor(void * skip) {
   	  }
   	}
   	else {
-      pthread_mutex_lock(&mutexRunningProcesses);
+      M_LOCK(&mutexRunningProcesses);
       runningProcesses--;
-      pthread_cond_signal(&condFreeSlots);
-      pthread_mutex_unlock(&mutexRunningProcesses);
+      C_SIGNAL(&condFreeSlots);
+      M_UNLOCK(&mutexRunningProcesses);
   	}
     endProcess(pid, status);
   }
-  endProcessMonitorThread:
-  pthread_exit(NULL);
 }
 
 /*
@@ -108,11 +106,11 @@ void * processMonitor(void * skip) {
 */
 void newProcess(char * const *args) {
   int pid;
-  pthread_mutex_lock(&mutexRunningProcesses);
+  M_LOCK(&mutexRunningProcesses);
   while(runningProcesses==MAXPAR) {
-    pthread_cond_wait(&condFreeSlots, &mutexRunningProcesses);
+    C_WAIT(&condFreeSlots, &mutexRunningProcesses);
   }
-  pthread_mutex_unlock(&mutexRunningProcesses);
+  M_UNLOCK(&mutexRunningProcesses);
 
   pid = fork();
   if (pid == 0) {
@@ -121,19 +119,19 @@ void newProcess(char * const *args) {
     exit(EXIT_FAILURE);
   }
   else if (pid == -1) { //if fork failed
-    pthread_mutex_lock(&mutexRunningProcesses);
+    M_LOCK(&mutexRunningProcesses);
     processesWaitingToRun--;
-    pthread_cond_signal(&condRunningProcesses);
-    pthread_mutex_unlock(&mutexRunningProcesses);
+    C_SIGNAL(&condRunningProcesses);
+    M_UNLOCK(&mutexRunningProcesses);
     perror("Erro na criação do processo-filho:\n");
   }
   else { //fork worked and we are in the parent process
     addProcess(pid);
-    pthread_mutex_lock(&mutexRunningProcesses);
+    M_LOCK(&mutexRunningProcesses);
     runningProcesses++;
     processesWaitingToRun--;
-    pthread_cond_signal(&condRunningProcesses);
-    pthread_mutex_unlock(&mutexRunningProcesses);
+    C_SIGNAL(&condRunningProcesses);
+    M_UNLOCK(&mutexRunningProcesses);
   }
 }
 
