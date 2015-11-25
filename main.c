@@ -20,6 +20,7 @@
 int runningProcesses=0;
 int processesWaitingToRun=0;
 int exitCalled=0;
+int outPipe=-1;
 pthread_mutex_t mutexRunningProcesses;
 pthread_cond_t condRunningProcesses;
 pthread_cond_t condFreeSlots;
@@ -54,6 +55,7 @@ int readFromPipe(int inputPipe, char * buffer, int * terminalPid, TerminalList *
     return 2;
   } else if (op==3) { //informacao que e para se fechar a par-shell
     exitCalled = 1;
+    printf("RECEIVED EXIT SIGNAL!\n");
     return 3;
   }
   fprintf(stderr,"Unknown operator!\n");
@@ -63,14 +65,13 @@ int readFromPipe(int inputPipe, char * buffer, int * terminalPid, TerminalList *
 void handleSIGINT(int signum) {
   if (signum==SIGINT) {
     signal(SIGINT,SIG_IGN);
-    int outFile;
-    int mode = 3;
-    char * buffer = (char*)&mode;
-    if ((outFile = open("par-shell-in", O_WRONLY) < 0)) {
-      fprintf(stderr, "Erro ao abrir o ficheiro de output (no handle do sigint)");
+    if (outPipe == -1) {
+      fprintf(stderr, "SIGINT received during startup, exiting\n");
       exit(-1);
     }
-    write(outFile, buffer, sizeof(int));
+    int mode = 3;
+    char * buffer = (char*)&mode;
+    write(outPipe, buffer, sizeof(int));
   }
 }
 
@@ -112,6 +113,10 @@ int main() {
     exit(-1);
   }
   printf("Pipe aberto!!!\n");
+  if ((outPipe = open(INPUT_FILE, O_WRONLY) < 0)) {
+    fprintf(stderr, "Erro ao abrir o ficheiro de output" INPUT_FILE "\n");
+    exit(-1);
+  }
   initProcessList();
   if(pthread_create(&threadMonitor, 0,processMonitor, NULL)!= 0) {
     printf("Erro na criação da tarefa\n");
@@ -129,7 +134,10 @@ int main() {
       continue;
     }
     if (strcmp(args[0],"exit-global") == 0) {
-      exitCalled = 1;
+      int mode = 3;
+      char * opt = (char*)&mode;
+      write(outPipe, opt, sizeof(int));
+      printf("Writing exit mode to pipe\n");
       continue;
     }
     processesWaitingToRun++;

@@ -10,7 +10,11 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #define BUFFER_LEN PIPE_BUF
+#define INPUT_FILE "par-shell-in"
 int outfileid;
+
+///TODO: TESTAR SE O PIPE EXISTE
+///TODO: TESTAR STUFF
 ///TODO: TESTAR OS WRITE (SE DEU ERRO)
 
 int main(int argc, char** argv) {
@@ -20,7 +24,7 @@ int main(int argc, char** argv) {
   char * orig;
   pid = getpid();
   if (argc!=2) {
-    fprintf(stderr, "Modo de utilizacao %s <pathname para o pipe>", argv[0]);
+    fprintf(stderr, "Modo de utilizacao: %s <pathname para o pipe>", argv[0]);
     exit(-1);
   }
   outfileid = open(argv[1], O_WRONLY);
@@ -34,6 +38,12 @@ int main(int argc, char** argv) {
     printf("\"%s\"\n", buffer + 3*sizeof(int));
     if (c == NULL || *c == EOF) {
       break;
+    }
+    if (strcmp("exit-global\n", buffer + 3*sizeof(int))==0) {
+      mode = 3;
+      orig = (char*)&mode;
+      memcpy(buffer, orig, sizeof(int));
+      write(outfileid, buffer, sizeof(int));
     }
     len = strlen(buffer+3*sizeof(int));
     len++;
