@@ -25,15 +25,15 @@ void initProcessList() {
   processes.totalTime = 0.0;
   processes.first = NULL;
   processes.output = fopen("log.txt", "a+");
-  TESTNULL(processes.output, "Erro ao abrir ficheiro");
+  TESTTRUE(processes.output, "Erro ao abrir ficheiro");
   while ((c=fgetc(processes.output))!=EOF) {
     ungetc(c, processes.output);
     for (i=0; i<3; i++) {
-      TESTNULL(fgets(inp[i], 200, processes.output), "Invalid log file!!!");
+      TESTTRUE(fgets(inp[i], 200, processes.output), "Invalid log file!!!");
     }
-    TESTNULL(sscanf(inp[0], "iteracao %d", &(processes.iteration)), "Ficheiro Invalido");
+    TESTTRUE(sscanf(inp[0], "iteracao %d", &(processes.iteration)), "Ficheiro Invalido");
     processes.iteration += 1;
-    TESTNULL(sscanf(inp[2], "total execution time: %lf s", &(processes.totalTime)), "Ficheiro Invalido");
+    TESTTRUE(sscanf(inp[2], "total execution time: %lf s", &(processes.totalTime)), "Ficheiro Invalido");
   }
 }
 
@@ -54,10 +54,11 @@ void endProcessList() {
 /*
   Add a new process to the processes vector
 */
-void addProcess(int processId) {
+void addProcess(int processId, int terminalPid) {
   RunningProcess * item = malloc(sizeof(RunningProcess));
   TESTMEM(item);
   item->pid = processId;
+  item->terminalPid = terminalPid;
   clock_gettime( CLOCK_MONOTONIC, &(item->startTime));
   item->running = 1;
   item->next = NULL;

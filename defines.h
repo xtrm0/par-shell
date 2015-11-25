@@ -9,7 +9,7 @@
   exit(ENOMEM);\
 }
 
-#define TESTNULL(s, err) if (!s) {\
+#define TESTTRUE(s, err) if (!s) {\
   fprintf(stderr, err);\
   exit(-1);\
 }
@@ -37,5 +37,9 @@
   perror("Error signaling on condition"); \
   exit(EXIT_FAILURE); \
  }
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+#define _AT_ __FILE__ ":" TOSTRING(__LINE__)
 
 #endif

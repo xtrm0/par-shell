@@ -13,6 +13,7 @@ typedef struct RUNNING_PROCESS {
   int running;
   int pid;
   int status;
+  int terminalPid;
   struct timespec startTime;
   struct timespec endTime;
   struct RUNNING_PROCESS * next;
@@ -20,7 +21,7 @@ typedef struct RUNNING_PROCESS {
 
 void initProcessList();
 void endProcessList();
-void addProcess(int proccessId);
+void addProcess(int proccessId, int terminalPid);
 void endProcess(int proccessId, int status);
 void printExitStatus(RunningProcess *);
 double getRunningTime(RunningProcess *);
