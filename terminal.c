@@ -11,13 +11,14 @@
 #include <fcntl.h>
 #define BUFFER_LEN PIPE_BUF
 #define INPUT_FILE "par-shell-in"
-int outfileid;
 
 ///TODO: TESTAR SE O PIPE EXISTE
 ///TODO: TESTAR STUFF
 ///TODO: TESTAR OS WRITE (SE DEU ERRO)
 
+void showPrompt();
 int main(int argc, char** argv) {
+  int outfileid;
   char * c;
   char buffer[BUFFER_LEN];
   int len, pid, mode;
@@ -34,9 +35,13 @@ int main(int argc, char** argv) {
   orig = (char*)&pid;
   memcpy(buffer+sizeof(int), orig, sizeof(int));
   write(outfileid, buffer, 2*sizeof(int));
+  showPrompt();
   while ((c = fgets(buffer + 3*sizeof(int), BUFFER_LEN - 3*sizeof(int), stdin)) > 0) {
     printf("\"%s\"\n", buffer + 3*sizeof(int));
     if (c == NULL || *c == EOF) {
+      break;
+    }
+    if (strcmp("exit\n", buffer + 3*sizeof(int))==0) {
       break;
     }
     if (strcmp("exit-global\n", buffer + 3*sizeof(int))==0) {
@@ -44,6 +49,7 @@ int main(int argc, char** argv) {
       orig = (char*)&mode;
       memcpy(buffer, orig, sizeof(int));
       write(outfileid, buffer, sizeof(int));
+      pause(); //o processo vai morrer, mas ate la pausamos
     }
     len = strlen(buffer+3*sizeof(int));
     len++;
@@ -55,6 +61,7 @@ int main(int argc, char** argv) {
     orig = (char*)&pid;
     memcpy(buffer+2*sizeof(int), orig, sizeof(int));
     write(outfileid, buffer, 3*sizeof(int) + len);
+    showPrompt();
   }
   mode = 2;
   orig = (char*)&mode;
@@ -62,5 +69,15 @@ int main(int argc, char** argv) {
   orig = (char*)&pid;
   memcpy(buffer+sizeof(int), orig, sizeof(int));
   write(outfileid, buffer, 2*sizeof(int));
-  //close(outfileid);
+  close(outfileid);
+}
+
+/*
+  Outputs to stdout the current working directory
+*/
+void showPrompt() {
+  char *pwd = getcwd(NULL,42);
+  TESTMEM(pwd);
+  printf("%s$ ", pwd);
+  free(pwd);
 }

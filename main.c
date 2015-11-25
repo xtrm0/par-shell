@@ -67,7 +67,7 @@ void handleSIGINT(int signum) {
     signal(SIGINT,SIG_IGN);
     if (outPipe == -1) {
       fprintf(stderr, "SIGINT received during startup, exiting\n");
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
     int mode = 3;
     char * buffer = (char*)&mode;
@@ -88,39 +88,39 @@ int main() {
   signal(SIGINT, handleSIGINT);
   if (pthread_mutex_init(&mutexRunningProcesses, NULL)) {
     fprintf(stderr, "Could not create runningProcesses mutex\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   if (pthread_cond_init(&condRunningProcesses, NULL)) {
     fprintf(stderr, "Could not create runningProcesses cond\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   if (pthread_cond_init(&condFreeSlots, NULL)) {
     fprintf(stderr, "Could not create FreeSlots cond\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   unlink("par-shell-in");
   if (stat("par-shell-in", &st) == 0) {
     fprintf(stderr, "Parshell is already running on this directory!!!\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   if (mkfifo(INPUT_FILE, 0777)<0) {
     fprintf(stderr, "Could not create fifo " INPUT_FILE "\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   printf("A abrir o pipe\n");
   if ((inputPipe = open(INPUT_FILE, O_RDONLY)) < 0) {
     fprintf(stderr, "Could not create fifo " INPUT_FILE "\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   printf("Pipe aberto!!!\n");
-  if ((outPipe = open(INPUT_FILE, O_WRONLY) < 0)) {
+  if ((outPipe = open(INPUT_FILE, O_WRONLY)) < 0) {
     fprintf(stderr, "Erro ao abrir o ficheiro de output" INPUT_FILE "\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   initProcessList();
   if(pthread_create(&threadMonitor, 0,processMonitor, NULL)!= 0) {
     printf("Erro na criação da tarefa\n");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
 
   while(1) {
@@ -160,6 +160,9 @@ int main() {
   pthread_mutex_destroy(&mutexRunningProcesses);
   pthread_cond_destroy(&condRunningProcesses);
   pthread_cond_destroy(&condFreeSlots);
+  close(inputPipe);
+  close(outPipe);
+  unlink(INPUT_FILE);
 
   return EXIT_SUCCESS;
 }
@@ -216,9 +219,9 @@ void newProcess(char * const *args, int terminalPid) {
     unlink(outFileName);
     fprintf(stderr, "%s\n", outFileName);
     outFile = fopen(outFileName, "w");
-    printf("outfile: %d\n", fileno(outFile));
+    fprintf(stderr, "outfile: %d\n", fileno(outFile));
     fflush(stdout);
-    printf("dup2 return: %d\n", dup2(fileno(outFile), STDOUT_FILENO));
+    fprintf(stderr, "dup2 return: %d\n", dup2(fileno(outFile), STDOUT_FILENO));
     fclose(outFile);
     execv(args[0], args);
     fprintf(stderr, "Erro no carregamento do programa %s\n", args[0]);
@@ -250,14 +253,4 @@ void exitParShell() {
     printExitStatus(item);
     item = item->next;
   }
-}
-
-/*
-  Outputs to stdout the current working directory
-*/
-void showPrompt() {
-  char *pwd = getcwd(NULL,42);
-  TESTMEM(pwd);
-  printf("%s$ ", pwd);
-  free(pwd);
 }

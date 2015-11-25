@@ -32,7 +32,7 @@ terminalList.o: terminalList.c terminalList.h
 .PHONY: all clean
 
 clean:
-	rm -f ./*.o ./par-shell ./fibonacci log.txt par-shell-in par-shell-out-*
+	rm -f ./*.o ./par-shell ./par-shell-terminal ./fibonacci log.txt par-shell-in par-shell-out-*
 
 fibonacci: fibonacci.c
 	gcc fibonacci.c -o fibonacci
