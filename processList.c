@@ -150,3 +150,11 @@ void printExitStatus(RunningProcess * item) {
 RunningProcess * getFirstRunningProccess() {
   return processes.first;
 }
+
+double getTotalTime() {
+  double ret;
+  M_LOCK(&processes.mutexList);
+  ret = processes.totalTime;
+  M_UNLOCK(&processes.mutexList);
+  return ret;
+}

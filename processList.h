@@ -26,5 +26,6 @@ void endProcess(int proccessId, int status);
 void printExitStatus(RunningProcess *);
 double getRunningTime(RunningProcess *);
 RunningProcess * getFirstRunningProccess();
+double getTotalTime();
 
 #endif

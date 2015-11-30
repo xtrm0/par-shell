@@ -33,6 +33,8 @@ int readFromPipe(int inputPipe, char * buffer, int * terminalPid, TerminalList *
   printf("Running readFromPipe\n");
   int len;
   int op;
+  int statsPipe;
+  double totalTime;
   TESTTRUE((read(inputPipe, &op, sizeof(int))==sizeof(int)), "Erro no formato do pipe (" _AT_ ")\n");
   printf("op: %d\n", op);
   if (op==0) {
@@ -57,6 +59,23 @@ int readFromPipe(int inputPipe, char * buffer, int * terminalPid, TerminalList *
     exitCalled = 1;
     printf("RECEIVED EXIT SIGNAL!\n");
     return 3;
+  } else if (op==4)  {//recebeu um stats
+    //TODO: stats
+    TESTTRUE((read(inputPipe, &len, sizeof(int)) == sizeof(int)), "Erro no formato do pipe (" _AT_ ")\n");
+    printf("len: %d\n", len);
+    TESTTRUE((read(inputPipe, terminalPid, sizeof(int)) == sizeof(int)), "Erro no formato do pipe (" _AT_ ")\n");
+    printf("pid: %d\n", *terminalPid);
+    TESTTRUE((read(inputPipe, buffer, len) == len), "Erro no formato do pipe (" _AT_ ")\n");
+    buffer[len]=0;
+    if ((statsPipe = open(buffer, O_WRONLY)) < 0) {
+      fprintf(stderr, "Erro ao abrir o ficheiro de output" INPUT_FILE "\n");
+      exit(EXIT_FAILURE);
+    }
+    totalTime = getTotalTime();
+    write(statsPipe, (char*)&runningProcesses, sizeof(int));
+    write(statsPipe, (char*)&totalTime, sizeof(double));
+    close(statsPipe);
+    return 4;
   }
   fprintf(stderr,"Unknown operator!\n");
   return -1;
