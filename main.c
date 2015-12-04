@@ -116,7 +116,10 @@ int main() {
   TerminalList * termlist = lst_new();
   pthread_t threadMonitor;
   char *args[N_ARGS];
-  signal(SIGINT, handleSIGINT);
+  if (signal(SIGINT, handleSIGINT)) {
+    fprintf(stderr, "Could not set sigint handler!\n");
+    exit(EXIT_FAILURE);
+  }
   if (pthread_mutex_init(&mutexRunningProcesses, NULL)) {
     fprintf(stderr, "Could not create runningProcesses mutex\n");
     exit(EXIT_FAILURE);

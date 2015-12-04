@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
   pid = getpid();
   if (argc!=2) {
     fprintf(stderr, "Modo de utilizacao: %s <pathname para o pipe>", argv[0]);
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   if ((outfileid = open(argv[1], O_WRONLY)) < 0) {
     fprintf(stderr, "Could not create fifo %s\n", argv[1]);
@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
       memcpy(buffer, orig, sizeof(int));
       TESTTRUE(write(outfileid, buffer, sizeof(int))==sizeof(int), "Erro na escrite para o pipe (" _AT_ ")\n");
       pause(); //o processo vai morrer, mas ate la pausamos
-      exit(-1);
+      exit(EXIT_FAILURE);
     }
     if (strcmp("stats\n", buffer_aux)==0) {
       strcpy(mktemp_dir, MKTEMP_TEMPLATE);
