@@ -30,12 +30,12 @@ void showPrompt();
 void * processMonitor(void * skip);
 
 int readFromPipe(int inputPipe, char * buffer, int * terminalPid, TerminalList * termlist) {
-  printf("Running readFromPipe\n");
   int len;
   int op;
   int statsPipe;
   double totalTime;
   TESTTRUE((read(inputPipe, &op, sizeof(int))==sizeof(int)), "Erro no formato do pipe (" _AT_ ")\n");
+  printf("\nNew operation:\n");
   printf("op: %d\n", op);
   if (op==0) {
     TESTTRUE((read(inputPipe, &len, sizeof(int)) == sizeof(int)), "Erro no formato do pipe (" _AT_ ")\n");
@@ -57,10 +57,8 @@ int readFromPipe(int inputPipe, char * buffer, int * terminalPid, TerminalList *
     return 2;
   } else if (op==3) { //informacao que e para se fechar a par-shell
     exitCalled = 1;
-    printf("RECEIVED EXIT SIGNAL!\n");
     return 3;
   } else if (op==4)  {//recebeu um stats
-    //TODO: stats
     TESTTRUE((read(inputPipe, &len, sizeof(int)) == sizeof(int)), "Erro no formato do pipe (" _AT_ ")\n");
     printf("len: %d\n", len);
     TESTTRUE((read(inputPipe, terminalPid, sizeof(int)) == sizeof(int)), "Erro no formato do pipe (" _AT_ ")\n");
@@ -68,16 +66,22 @@ int readFromPipe(int inputPipe, char * buffer, int * terminalPid, TerminalList *
     TESTTRUE((read(inputPipe, buffer, len) == len), "Erro no formato do pipe (" _AT_ ")\n");
     buffer[len]=0;
     if ((statsPipe = open(buffer, O_WRONLY)) < 0) {
-      fprintf(stderr, "Erro ao abrir o ficheiro de output" INPUT_FILE "\n");
+      fprintf(stderr, "Erro ao abrir o ficheiro de output " INPUT_FILE "\n");
       exit(EXIT_FAILURE);
     }
     totalTime = getTotalTime();
-    write(statsPipe, (char*)&runningProcesses, sizeof(int));
-    write(statsPipe, (char*)&totalTime, sizeof(double));
-    close(statsPipe);
+    if (write(statsPipe, (char*)&runningProcesses, sizeof(int)) != sizeof(int)) {
+      fprintf(stderr, "Warning: erro a escrever para um pipe\n");
+    }
+    if (write(statsPipe, (char*)&totalTime, sizeof(double)) != sizeof(double)) {
+      fprintf(stderr, "Warning: erro a escrever para um pipe \n");
+    }
+    if (close(statsPipe)) {
+      fprintf(stderr, "Warning: erro ao fechar um pipe \n");
+    }
     return 4;
   }
-  fprintf(stderr,"Unknown operator!\n");
+  fprintf(stderr,"Warning: Unknown operator!\n");
   return -1;
 }
 
@@ -90,7 +94,12 @@ void handleSIGINT(int signum) {
     }
     int mode = 3;
     char * buffer = (char*)&mode;
-    write(outPipe, buffer, sizeof(int));
+    if (write(outPipe, buffer, sizeof(int))!= sizeof(int)) {
+      //Isto pode acontecer caso o pipe de input esteja quase cheio
+      //Neste caso, pomos exitCalled = 1 o que fará com que a lista de comando
+      //que está no buffer seja ignorada
+      exitCalled = 1;
+    }
   }
 }
 
@@ -122,17 +131,17 @@ int main() {
     fprintf(stderr, "Parshell is already running on this directory!!!\n");
     exit(EXIT_FAILURE);
   }
-  if (mkfifo(INPUT_FILE, 0777)<0) {
+  if (mkfifo(INPUT_FILE, 0660)<0) {
     fprintf(stderr, "Could not create fifo " INPUT_FILE "\n");
     exit(EXIT_FAILURE);
   }
-  printf("A abrir o pipe\n");
+  printf("A abrir o pipe " INPUT_FILE " para leitura...\n");
   if ((inputPipe = open(INPUT_FILE, O_RDONLY)) < 0) {
     fprintf(stderr, "Could not create fifo " INPUT_FILE "\n");
     exit(EXIT_FAILURE);
   }
-  printf("Pipe aberto!!!\n");
-  if ((outPipe = open(INPUT_FILE, O_WRONLY)) < 0) {
+  printf("A abrir o pipe " INPUT_FILE " para escrita...\n");
+  if ((outPipe = open(INPUT_FILE, O_WRONLY|O_NONBLOCK)) < 0) {
     fprintf(stderr, "Erro ao abrir o ficheiro de output" INPUT_FILE "\n");
     exit(EXIT_FAILURE);
   }
@@ -148,17 +157,6 @@ int main() {
     printf("Comando: %s\n", buffer);
     ret = readLineArguments(args, N_ARGS, buffer, BUFFER_LEN);
     if (!ret) continue;
-    if (strcmp(args[0],"stats") == 0) {
-      //XXX:TODO
-      continue;
-    }
-    if (strcmp(args[0],"exit-global") == 0) {
-      int mode = 3;
-      char * opt = (char*)&mode;
-      write(outPipe, opt, sizeof(int));
-      printf("Writing exit mode to pipe\n");
-      continue;
-    }
     processesWaitingToRun++;
     newProcess(args, terminalPid);
   }
@@ -179,9 +177,9 @@ int main() {
   pthread_mutex_destroy(&mutexRunningProcesses);
   pthread_cond_destroy(&condRunningProcesses);
   pthread_cond_destroy(&condFreeSlots);
-  close(inputPipe);
-  close(outPipe);
-  unlink(INPUT_FILE);
+  close(inputPipe); //aqui nao faz sentido testar o return destas funcoes
+  close(outPipe); //aqui nao faz sentido testar o return destas funcoes
+  unlink(INPUT_FILE); //aqui nao faz sentido testar o return destas funcoes
 
   return EXIT_SUCCESS;
 }
@@ -232,16 +230,21 @@ void newProcess(char * const *args, int terminalPid) {
   M_UNLOCK(&mutexRunningProcesses);
   pid = fork();
   if (pid == 0) {
+    signal(SIGINT, SIG_IGN);
     FILE * outFile;
     char outFileName[30];
     sprintf(outFileName, "par-shell-out-%d", getpid());
     unlink(outFileName);
-    fprintf(stderr, "%s\n", outFileName);
-    outFile = fopen(outFileName, "w");
-    fprintf(stderr, "outfile: %d\n", fileno(outFile));
+    if ((outFile = fopen(outFileName, "w")) == NULL) {
+      fprintf(stderr, "Erro a abrir ficheiro: %s\n", outFileName);
+      exit(EXIT_FAILURE);
+    }
     fflush(stdout);
-    fprintf(stderr, "dup2 return: %d\n", dup2(fileno(outFile), STDOUT_FILENO));
-    fclose(outFile);
+    if ((dup2(fileno(outFile), STDOUT_FILENO)) < 0) {
+      fprintf(stderr, "Erro a fazer dup2\n");
+      exit(EXIT_FAILURE);
+    }
+    fclose(outFile); //nao testamos pois n faz mal se nao consegirmos fechar o ficheiro
     execv(args[0], args);
     fprintf(stderr, "Erro no carregamento do programa %s\n", args[0]);
     exit(EXIT_FAILURE);

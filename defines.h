@@ -9,7 +9,7 @@
   exit(ENOMEM);\
 }
 
-#define TESTTRUE(s, err) if (!s) {\
+#define TESTTRUE(s, err) if (!(s)) {\
   fprintf(stderr, err);\
   exit(-1);\
 }

@@ -54,12 +54,14 @@ void endProcessList() {
 /*
   Add a new process to the processes vector
 */
+//TODO: EDITAR ISTO, PARA RECEBER START TIME
 void addProcess(int processId, int terminalPid) {
   RunningProcess * item = malloc(sizeof(RunningProcess));
   TESTMEM(item);
   item->pid = processId;
   item->terminalPid = terminalPid;
   clock_gettime( CLOCK_MONOTONIC, &(item->startTime));
+  //Este gettime e feito praticamente a seguir a ser criado o novo processo
   item->running = 1;
   item->next = NULL;
   M_LOCK(&processes.mutexList);
@@ -75,6 +77,7 @@ void addProcess(int processId, int terminalPid) {
 /*
   Marks a process in the processes vector as ended
 */
+//TODO: EDITAR ISTO, PARA RECEBER END TIME
 void endProcess(int processId, int status) {
   RunningProcess * item;
   double ptime;

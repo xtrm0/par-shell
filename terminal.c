@@ -13,10 +13,6 @@
 #define INPUT_FILE "par-shell-in"
 #define MKTEMP_TEMPLATE "/tmp/par-shell-out-XXXXXX"
 
-///TODO: TESTAR SE O PIPE EXISTE
-///TODO: TESTAR STUFF
-///TODO: TESTAR OS WRITE (SE DEU ERRO)
-
 void showPrompt();
 int main(int argc, char** argv) {
   int outfileid;
@@ -36,17 +32,20 @@ int main(int argc, char** argv) {
     fprintf(stderr, "Modo de utilizacao: %s <pathname para o pipe>", argv[0]);
     exit(-1);
   }
-  outfileid = open(argv[1], O_WRONLY);
+  if ((outfileid = open(argv[1], O_WRONLY)) < 0) {
+    fprintf(stderr, "Could not create fifo %s\n", argv[1]);
+    exit(EXIT_FAILURE);
+  }
   mode = 1;
   orig = (char*)&mode;
   memcpy(buffer, orig, sizeof(int));
   orig = (char*)&pid;
   memcpy(buffer+sizeof(int), orig, sizeof(int));
-  write(outfileid, buffer, 2*sizeof(int));
+  TESTTRUE(write(outfileid, buffer, 2*sizeof(int))==2*sizeof(int), "Erro na escrite para o pipe (" _AT_ ")\n");
   showPrompt();
   buffer_aux = buffer + 3*sizeof(int);
   while ((c = fgets(buffer_aux, BUFFER_LEN - 3*sizeof(int), stdin)) > 0) {
-    printf("\"%s\"\n", buffer_aux);
+    //printf("\"%s\"\n", buffer_aux);
     if (c == NULL || *c == EOF) {
       break;
     }
@@ -57,16 +56,19 @@ int main(int argc, char** argv) {
       mode = 3;
       orig = (char*)&mode;
       memcpy(buffer, orig, sizeof(int));
-      write(outfileid, buffer, sizeof(int));
+      TESTTRUE(write(outfileid, buffer, sizeof(int))==sizeof(int), "Erro na escrite para o pipe (" _AT_ ")\n");
       pause(); //o processo vai morrer, mas ate la pausamos
       exit(-1);
     }
     if (strcmp("stats\n", buffer_aux)==0) {
       strcpy(mktemp_dir, MKTEMP_TEMPLATE);
-      mkdtemp(mktemp_dir);
+      TESTTRUE(mkdtemp(mktemp_dir)!=NULL, "Erro na criação do ficheiro temporário (" _AT_ "\n");
       strncpy(mktemp_filename, mktemp_dir, PATH_MAX);
       strncpy(mktemp_filename+strlen(mktemp_filename), "/out", PATH_MAX-strlen(mktemp_filename));
-      mkfifo(mktemp_filename, 0777);
+      if (mkfifo(mktemp_filename, 0660) <0) {
+        fprintf(stderr, "Could not create fifo " INPUT_FILE "\n");
+        exit(EXIT_FAILURE);
+      }
 
       len = strlen(mktemp_filename);
       strncpy(buffer_aux, mktemp_filename, BUFFER_LEN - 3*sizeof(int));
@@ -77,7 +79,7 @@ int main(int argc, char** argv) {
       memcpy(buffer+sizeof(int), orig, sizeof(int));
       orig = (char*)&pid;
       memcpy(buffer+2*sizeof(int), orig, sizeof(int));
-      write(outfileid, buffer, 3*sizeof(int) + len);
+      TESTTRUE(write(outfileid, buffer, 3*sizeof(int) + len)==3*sizeof(int) + len, "Erro na escrita para o pipe (" _AT_ ")\n");
 
       if ((inputPipe = open(mktemp_filename, O_RDONLY)) < 0) {
         fprintf(stderr, "Could not create fifo " INPUT_FILE "\n");
@@ -89,9 +91,9 @@ int main(int argc, char** argv) {
       printf("Numero total de processos: %d\n"
              "Tempo total: %f\n", totalProc, totalTime);
 
-      close(inputPipe);
-      unlink(mktemp_filename);
-      unlink(mktemp_dir);
+      close(inputPipe);//nao faz sentido testarmos isto, pois e um ficheiro temporario
+      unlink(mktemp_filename);//nao faz sentido testarmos isto, pois e um ficheiro temporario
+      unlink(mktemp_dir);//nao faz sentido testarmos isto, pois e um ficheiro temporario
       showPrompt();
       continue;
     }
@@ -106,7 +108,7 @@ int main(int argc, char** argv) {
     memcpy(buffer+sizeof(int), orig, sizeof(int));
     orig = (char*)&pid;
     memcpy(buffer+2*sizeof(int), orig, sizeof(int));
-    write(outfileid, buffer, 3*sizeof(int) + len);
+    TESTTRUE(write(outfileid, buffer, 3*sizeof(int) + len)==3*sizeof(int) + len, "Erro na escrite para o pipe (" _AT_ ")\n");
     showPrompt();
   }
   mode = 2;
@@ -114,8 +116,8 @@ int main(int argc, char** argv) {
   memcpy(buffer, orig, sizeof(int));
   orig = (char*)&pid;
   memcpy(buffer+sizeof(int), orig, sizeof(int));
-  write(outfileid, buffer, 2*sizeof(int));
-  close(outfileid);
+  TESTTRUE(write(outfileid, buffer, 2*sizeof(int))==2*sizeof(int), "Erro na escrite para o pipe (" _AT_ ")\n");
+  return close(outfileid);
 }
 
 /*
