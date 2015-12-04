@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
     }
     if (strcmp("stats\n", buffer_aux)==0) {
       strcpy(mktemp_dir, MKTEMP_TEMPLATE);
-      TESTTRUE(mkdtemp(mktemp_dir)!=NULL, "Erro na criação do ficheiro temporário (" _AT_ "\n");
+      TESTTRUE(mkdtemp(mktemp_dir)!=NULL, "Erro na criação do diretorio temporário (" _AT_ "\n");
       strncpy(mktemp_filename, mktemp_dir, PATH_MAX);
       strncpy(mktemp_filename+strlen(mktemp_filename), "/out", PATH_MAX-strlen(mktemp_filename));
       if (mkfifo(mktemp_filename, 0660) <0) {

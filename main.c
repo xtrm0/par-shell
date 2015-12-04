@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <time.h>
 #include <sys/wait.h>
 #include <limits.h>
 #include <sys/types.h>
@@ -17,6 +18,7 @@
 #define N_ARGS 5
 #define BUFFER_LEN PIPE_BUF
 #define INPUT_FILE "par-shell-in"
+#define MKTEMP_TEMPLATE "/tmp/par-shell-in-XXXXXX"
 int runningProcesses=0;
 int processesWaitingToRun=0;
 int exitCalled=0;
@@ -107,12 +109,13 @@ void handleSIGINT(int signum) {
 int main() {
   int inputPipe;
   char buffer[BUFFER_LEN];
+  char mktemp_filename[PATH_MAX];
+  char mktemp_dir[PATH_MAX];
   int ret;
   int terminalPid;
   TerminalList * termlist = lst_new();
   pthread_t threadMonitor;
   char *args[N_ARGS];
-  struct stat st;
   signal(SIGINT, handleSIGINT);
   if (pthread_mutex_init(&mutexRunningProcesses, NULL)) {
     fprintf(stderr, "Could not create runningProcesses mutex\n");
@@ -126,22 +129,23 @@ int main() {
     fprintf(stderr, "Could not create FreeSlots cond\n");
     exit(EXIT_FAILURE);
   }
-  unlink("par-shell-in");
-  if (stat("par-shell-in", &st) == 0) {
-    fprintf(stderr, "Parshell is already running on this directory!!!\n");
+
+  strcpy(mktemp_dir, MKTEMP_TEMPLATE);
+  TESTTRUE(mkdtemp(mktemp_dir)!=NULL, "Erro na criação do diretorio temporário (" _AT_ ")\n");
+  strncpy(mktemp_filename, mktemp_dir, PATH_MAX);
+  strncpy(mktemp_filename+strlen(mktemp_filename), "/" INPUT_FILE, PATH_MAX-strlen(mktemp_filename));
+  fprintf(stdin, "Ficheiro de input: '%s'\n", mktemp_filename);
+  if (mkfifo(mktemp_filename, 0660) <0) {
+    fprintf(stderr, "Could not create fifo %s\n", mktemp_filename);
     exit(EXIT_FAILURE);
   }
-  if (mkfifo(INPUT_FILE, 0660)<0) {
+  printf("A abrir o pipe %s para leitura...\n", mktemp_filename);
+  if ((inputPipe = open(mktemp_filename, O_RDONLY)) < 0) {
     fprintf(stderr, "Could not create fifo " INPUT_FILE "\n");
     exit(EXIT_FAILURE);
   }
-  printf("A abrir o pipe " INPUT_FILE " para leitura...\n");
-  if ((inputPipe = open(INPUT_FILE, O_RDONLY)) < 0) {
-    fprintf(stderr, "Could not create fifo " INPUT_FILE "\n");
-    exit(EXIT_FAILURE);
-  }
-  printf("A abrir o pipe " INPUT_FILE " para escrita...\n");
-  if ((outPipe = open(INPUT_FILE, O_WRONLY|O_NONBLOCK)) < 0) {
+  printf("A abrir o pipe %s para escrita...\n", mktemp_filename);
+  if ((outPipe = open(mktemp_filename, O_WRONLY|O_NONBLOCK)) < 0) {
     fprintf(stderr, "Erro ao abrir o ficheiro de output" INPUT_FILE "\n");
     exit(EXIT_FAILURE);
   }
@@ -189,6 +193,7 @@ int main() {
 */
 void * processMonitor(void * skip) {
   int pid, status;
+  struct timespec tm;
   while(1) {
     M_LOCK(&mutexRunningProcesses);
     while(runningProcesses==0) {
@@ -209,12 +214,13 @@ void * processMonitor(void * skip) {
   	  }
   	}
   	else {
+      clock_gettime( CLOCK_MONOTONIC, &tm);
       M_LOCK(&mutexRunningProcesses);
       runningProcesses--;
       C_SIGNAL(&condFreeSlots);
       M_UNLOCK(&mutexRunningProcesses);
   	}
-    endProcess(pid, status);
+    endProcess(pid, status, tm);
   }
 }
 
@@ -223,6 +229,7 @@ void * processMonitor(void * skip) {
 */
 void newProcess(char * const *args, int terminalPid) {
   int pid;
+  struct timespec tm;
   M_LOCK(&mutexRunningProcesses);
   while(runningProcesses==MAXPAR) {
     C_WAIT(&condFreeSlots, &mutexRunningProcesses);
@@ -257,7 +264,8 @@ void newProcess(char * const *args, int terminalPid) {
     perror("Erro na criação do processo-filho:\n");
   }
   else { //fork worked and we are in the parent process
-    addProcess(pid, terminalPid);
+    clock_gettime( CLOCK_MONOTONIC, &tm);
+    addProcess(pid, terminalPid, tm);
     M_LOCK(&mutexRunningProcesses);
     runningProcesses++;
     processesWaitingToRun--;

@@ -21,8 +21,8 @@ typedef struct RUNNING_PROCESS {
 
 void initProcessList();
 void endProcessList();
-void addProcess(int proccessId, int terminalPid);
-void endProcess(int proccessId, int status);
+void addProcess(int proccessId, int terminalPid, struct timespec startTime);
+void endProcess(int proccessId, int status, struct timespec endTime);
 void printExitStatus(RunningProcess *);
 double getRunningTime(RunningProcess *);
 RunningProcess * getFirstRunningProccess();
