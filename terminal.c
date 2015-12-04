@@ -124,8 +124,11 @@ int main(int argc, char** argv) {
   Outputs to stdout the current working directory
 */
 void showPrompt() {
-  char *pwd = getcwd(NULL,42);
-  TESTMEM(pwd);
-  printf("%s$ ", pwd);
-  free(pwd);
+  char *pwd = getcwd(NULL,420);
+  if (pwd != NULL) {
+    printf("%s$ ", pwd);
+    free(pwd);
+  } else {
+    printf("unk$ ");
+  }
 }
